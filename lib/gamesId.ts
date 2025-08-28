@@ -1,0 +1,18 @@
+// lib/gamesId.ts
+export function getUsername(user: any): string {
+  // пробуем разные поля, которые Privy может отдавать
+  return (
+    user?.username ||
+    user?.displayName ||
+    user?.email?.address ||   // иногда email — объект
+    user?.email ||            // иногда email — строка
+    'anonymous'
+  );
+}
+
+export function getAddress(user: any): string | undefined {
+  const acc = user?.linkedAccounts?.find(
+    (a: any) => a.type === 'cross_app' || a.type === 'wallet'
+  );
+  return acc?.address;
+}
