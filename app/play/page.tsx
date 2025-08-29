@@ -28,13 +28,19 @@ function mapPoints(dt: number) {
 }
 function clamp(v:number,min:number,max:number){return Math.max(min,Math.min(max,v));}
 
+
 function getUsername(user: any): string {
   return user?.username || user?.displayName || user?.email?.address || user?.email || 'anonymous';
 }
-function getAddress(user: any): string | undefined {
-  const acc = user?.linkedAccounts?.find((a: any) => a.type === 'cross_app' || a.type === 'wallet');
-  return acc?.address;
+
+function getMGIDAddress(user: any): string | undefined {
+  const CROSS_ID = process.env.NEXT_PUBLIC_MONAD_CROSS_APP_ID; 
+  const ca = user?.linkedAccounts?.find(
+    (a: any) => a?.type === 'cross_app' && a?.providerApp?.id === CROSS_ID
+  );
+  return ca?.embeddedWallets?.[0]?.address;
 }
+// -----------------------------------
 
 export default function Play() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -47,7 +53,7 @@ export default function Play() {
 
   const { authenticated, user, login } = usePrivy();
   const username = getUsername(user as any);
-  const address  = getAddress(user as any);
+  const address  = getMGIDAddress(user as any); 
 
   
   useEffect(() => {
@@ -91,7 +97,6 @@ export default function Play() {
     };
   }, [beats, startedAt, done, taps]);
 
-  
   const progress = startedAt ? clamp((performance.now() - startedAt) / DURATION_MS, 0, 1) : 0;
 
   
@@ -108,7 +113,7 @@ export default function Play() {
   
   const submitOnchain = async () => {
     if (!authenticated) { await login(); }
-    if (!address) { alert('No Games ID wallet address. Please log in.'); return; }
+    if (!address) { alert('Sign in with Monad Games ID to get your Games ID wallet.'); return; }
     if (!startedAt) { alert('Play the song first 😊'); return; }
 
     try {
@@ -117,8 +122,8 @@ export default function Play() {
         headers: { 'Content-Type':'application/json' },
         body: JSON.stringify({
           player: address,           
-          taps: taps.map(t=>t.t),    
-          t0: startedAt,             
+          taps: taps.map(t=>t.t),
+          t0: startedAt,
         }),
       });
       const data = await res.json();
@@ -131,7 +136,7 @@ export default function Play() {
 
   return (
     <main className="min-h-screen text-zinc-100 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 relative overflow-hidden p-6">
-    
+      {/* ауры */}
       <div className="pointer-events-none absolute -top-40 -left-40 h-96 w-96 rounded-full blur-3xl opacity-30"
            style={{ background: "radial-gradient(circle, #7c3aed 0%, transparent 60%)" }} />
       <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-30"
@@ -153,6 +158,7 @@ export default function Play() {
           </button>
         )}
 
+        
         <div className="w-full max-w-3xl h-24 relative">
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[6px] bg-zinc-800 rounded-full" />
           <div className="absolute inset-0">
@@ -180,13 +186,25 @@ export default function Play() {
               return (
                 <div key={i} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2" style={{ left: x }}>
                   <div style={{ width: size, height: size, background: bg }}
-                      className="rounded-full ring-2 ring-orange-300/60" />
+                       className="rounded-full ring-2 ring-orange-300/60" />
                   <div className="absolute -top-8 -left-6 text-xs text-orange-300/90">+{tap.pts}</div>
                 </div>
               );
             })}
           </div>
         </div>
+
+        
+        {!address && (
+          <div className="text-sm text-amber-300/90 bg-amber-900/20 border border-amber-600/30 rounded p-3">
+            Sign in with <b>Monad Games ID</b> to link your Games ID wallet.
+            {authenticated ? (
+              <> If you still see this — try re-login or reserve a username&nbsp;
+                <a className="underline" href="https://monad-games-id-site.vercel.app/" target="_blank" rel="noreferrer">here</a>.
+              </>
+            ) : null}
+          </div>
+        )}
 
         {startedAt && !done && (
           <div className="text-sm opacity-80 text-center">
@@ -208,20 +226,21 @@ export default function Play() {
               <button onClick={submit} className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500">
                 Submit to Leaderboard
               </button>
-              
-              <button onClick={submitOnchain} className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500">
+              <button
+                onClick={submitOnchain}
+                disabled={!address}
+                className={`px-4 py-2 rounded ${address ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-cyan-600/40 cursor-not-allowed'}`}
+              >
                 Submit On-chain
               </button>
-              
               <Link
-              href="https://monad-games-id-site.vercel.app/leaderboard"
-        target="_blank"
-      rel="noopener noreferrer"
-    className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-500"
-  >
-    Global Leaderboard
-  </Link>
-
+                href="https://monad-games-id-site.vercel.app/leaderboard"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-500"
+              >
+                Global Leaderboard
+              </Link>
             </div>
           </div>
         )}
