@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePrivy, User } from '@privy-io/react-auth';
-import AuthBadge from '@/components/Auth';
+import { AuthComponent } from '@/components/Auth';
 
 /* ===== Gameplay constants ===== */
 const BPM = 120;
@@ -37,28 +36,6 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-/* ===== Monad Games ID helpers ===== */
-const CROSS_APP_ID = process.env.NEXT_PUBLIC_MONAD_CROSS_APP_ID || '';
-
-function getUsernameSafe(user?: User | null): string {
-  // Без обращения к нестандартным полям User, чтобы не ловить TS-ошибки
-  // Используем email, если есть, иначе "anonymous"
-  const email =
-    (user as unknown as { email?: { address?: string } } | undefined)?.email?.address;
-  return email || 'anonymous';
-}
-
-/** Вернёт адрес ИМЕННО из cross_app (MGID), иначе undefined */
-function getMGIDAddress(user?: User | null): string | undefined {
-  if (!user?.linkedAccounts) return undefined;
-  // user.linkedAccounts типизирован разнородно — безопасно пройдёмся по нему
-  const cross = (user.linkedAccounts as unknown as any[]).find(
-    (a) => a?.type === 'cross_app' && a?.providerApp?.id === CROSS_APP_ID
-  );
-  // в MGID cross_app объекте адрес лежит в embeddedWallets[0].address
-  return cross?.embeddedWallets?.[0]?.address || cross?.address;
-}
-
 export default function Play() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -68,10 +45,19 @@ export default function Play() {
   const [done, setDone] = useState(false);
   const [, setTick] = useState(0); // re-render for progress bar
 
-  // Privy / MGID
-  const { authenticated, user, login } = usePrivy();
-  const username = getUsernameSafe(user);
-  const address = getMGIDAddress(user); // <-- только MGID-кошелёк
+  // Данные от AuthComponent (Monad Games ID)
+  const [mgidAddress, setMgidAddress] = useState<string>('');
+  const [mgidUsername, setMgidUsername] = useState<string>('');
+
+  const handleUserChange = (u: any) => {
+    if (u) {
+      setMgidAddress(u.address || '');
+      setMgidUsername(u.username || '');
+    } else {
+      setMgidAddress('');
+      setMgidUsername('');
+    }
+  };
 
   /* progress animation */
   useEffect(() => {
@@ -125,26 +111,27 @@ export default function Play() {
 
   const progress = startedAt ? clamp((performance.now() - startedAt) / DURATION_MS, 0, 1) : 0;
 
-  /* local leaderboard submit (как было) */
+  /* local leaderboard submit */
   const submitLocal = async () => {
-    if (!authenticated) {
-      await login(); // модалка откроется с MGID (задано в провайдере)
+    if (!mgidAddress) {
+      alert('Sign in with Monad Games ID first.');
+      return;
     }
     const res = await fetch('/api/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, address, score }),
+      body: JSON.stringify({
+        username: mgidUsername || 'anonymous',
+        address: mgidAddress,
+        score,
+      }),
     });
     if (res.ok) window.location.href = '/leaders';
   };
 
   /* on-chain submit — только с MGID-адресом */
   const submitOnchain = async () => {
-    if (!authenticated) {
-      await login();
-      return;
-    }
-    if (!address) {
+    if (!mgidAddress) {
       alert('Please sign in with Monad Games ID — MGID wallet is required.');
       return;
     }
@@ -157,7 +144,7 @@ export default function Play() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          player: address, // <-- ТОЛЬКО MGID-адрес!
+          player: mgidAddress,            // <<< ТОЛЬКО MGID-адрес!
           taps: taps.map((t) => t.t),
           t0: startedAt,
         }),
@@ -182,8 +169,9 @@ export default function Play() {
         style={{ background: 'radial-gradient(circle, #06b6d4 0%, transparent 60%)' }}
       />
 
+      {/* Бейдж/кнопка авторизации MGID */}
       <div className="absolute top-4 right-4 z-10">
-        <AuthBadge />
+        <AuthComponent onUserChange={handleUserChange} />
       </div>
 
       <section className="max-w-4xl mx-auto mt-10 rounded-2xl bg-zinc-900/60 border border-zinc-800 p-6 shadow-2xl backdrop-blur-sm flex flex-col items-center gap-6">
@@ -206,7 +194,7 @@ export default function Play() {
         )}
 
         {/* Timeline */}
-        <div className="w-full max-w-3xl h-24 relative">
+        <div className="w/full max-w-3xl h-24 relative">
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[6px] bg-zinc-800 rounded-full" />
           <div className="absolute inset-0">
             {startedAt &&
@@ -247,9 +235,9 @@ export default function Play() {
         </div>
 
         {/* Hint when MGID is not linked */}
-        {!address && (
+        {!mgidAddress && (
           <div className="text-sm text-amber-300/90 bg-amber-900/20 border border-amber-600/30 rounded p-3">
-            Sign in with <b>Monad Games ID</b> (the login modal will open). After login, your MGID wallet will appear here.
+            Sign in with <b>Monad Games ID</b>. After login, your MGID wallet will appear here.
           </div>
         )}
 
@@ -275,14 +263,14 @@ export default function Play() {
               <Link href="/" className="px-4 py-2 rounded bg-zinc-800 hover:bg-zinc-700">
                 Main menu
               </Link>
-              <button onClick={submitLocal} className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500">
+              <button onClick={submitLocal} disabled={!mgidAddress} className={`px-4 py-2 rounded ${mgidAddress ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-emerald-600/40 cursor-not-allowed'}`}>
                 Submit to Leaderboard
               </button>
               <button
                 onClick={submitOnchain}
-                disabled={!address}
+                disabled={!mgidAddress}
                 className={`px-4 py-2 rounded ${
-                  address ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-cyan-600/40 cursor-not-allowed'
+                  mgidAddress ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-cyan-600/40 cursor-not-allowed'
                 }`}
               >
                 Submit On-chain
