@@ -1,4 +1,5 @@
 'use client';
+
 import { PrivyProvider } from '@privy-io/react-auth';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -7,8 +8,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
         
-        embeddedWallets: { createOnLogin: 'off' },
-        loginMethods: ['email'], 
+        loginMethods: ['email'],
+        embeddedWallets: { createOnLogin: 'users-without-wallets' },
         appearance: {
           theme: 'dark',
           accentColor: '#7c3aed',
