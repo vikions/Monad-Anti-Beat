@@ -7,12 +7,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
         
-        loginMethods: ['email'],
-
-      
-        embeddedWallets: { createOnLogin: 'users-without-wallets' },
-
-      
+        embeddedWallets: { createOnLogin: 'off' },
+        loginMethods: ['email'], 
         appearance: {
           theme: 'dark',
           accentColor: '#7c3aed',
