@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { AuthComponent } from '@/components/Auth';
 
-/* ===== Gameplay constants ===== */
+
 const BPM = 120;
 const DURATION_MS = 20_000;
 const BEAT_MS = 60_000 / BPM;
@@ -13,7 +13,7 @@ const MIN_MS = 50;
 const MAX_MS = 220;
 const START_OFFSET_MS = 0;
 
-/* ===== Helpers for rhythm logic ===== */
+
 function buildBeats(t0: number) {
   const beats: number[] = [];
   for (let t = t0; t <= t0 + DURATION_MS + 1; t += BEAT_MS) beats.push(t);
@@ -43,9 +43,9 @@ export default function Play() {
   const [score, setScore] = useState(0);
   const [taps, setTaps] = useState<{ t: number; dt: number; pts: number }[]>([]);
   const [done, setDone] = useState(false);
-  const [, setTick] = useState(0); // re-render for progress bar
+  const [, setTick] = useState(0); 
 
-  // Данные от AuthComponent (Monad Games ID)
+ 
   const [mgidAddress, setMgidAddress] = useState<string>('');
   const [mgidUsername, setMgidUsername] = useState<string>('');
 
@@ -59,7 +59,7 @@ export default function Play() {
     }
   };
 
-  /* progress animation */
+  
   useEffect(() => {
     if (!startedAt || done) return;
     let raf = 0;
@@ -86,7 +86,7 @@ export default function Play() {
     }, DURATION_MS + 80);
   };
 
-  /* tap handler */
+  
   useEffect(() => {
     const handler = (e: KeyboardEvent | MouseEvent) => {
       if (done || !startedAt) return;
@@ -111,7 +111,7 @@ export default function Play() {
 
   const progress = startedAt ? clamp((performance.now() - startedAt) / DURATION_MS, 0, 1) : 0;
 
-  /* local leaderboard submit */
+  
   const submitLocal = async () => {
     if (!mgidAddress) {
       alert('Sign in with Monad Games ID first.');
@@ -129,7 +129,7 @@ export default function Play() {
     if (res.ok) window.location.href = '/leaders';
   };
 
-  /* on-chain submit — только с MGID-адресом */
+  
   const submitOnchain = async () => {
     if (!mgidAddress) {
       alert('Please sign in with Monad Games ID — MGID wallet is required.');
@@ -144,7 +144,7 @@ export default function Play() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          player: mgidAddress,            // <<< ТОЛЬКО MGID-адрес!
+          player: mgidAddress,            
           taps: taps.map((t) => t.t),
           t0: startedAt,
         }),
@@ -169,7 +169,7 @@ export default function Play() {
         style={{ background: 'radial-gradient(circle, #06b6d4 0%, transparent 60%)' }}
       />
 
-      {/* Бейдж/кнопка авторизации MGID */}
+      
       <div className="absolute top-4 right-4 z-10">
         <AuthComponent onUserChange={handleUserChange} />
       </div>
@@ -193,7 +193,7 @@ export default function Play() {
           </button>
         )}
 
-        {/* Timeline */}
+        
         <div className="w-full max-w-3xl h-24 relative">
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[6px] bg-zinc-800 rounded-full" />
           <div className="absolute inset-0">
@@ -234,7 +234,7 @@ export default function Play() {
           </div>
         </div>
 
-        {/* Hint when MGID is not linked */}
+        
         {!mgidAddress && (
           <div className="text-sm text-amber-300/90 bg-amber-900/20 border border-amber-600/30 rounded p-3">
             Sign in with <b>Monad Games ID</b>. After login, your MGID wallet will appear here.
@@ -287,6 +287,23 @@ export default function Play() {
           </div>
         )}
       </section>
+      <div
+        className="pointer-events-none select-none fixed md:absolute bottom-6 right-6 z-20
+                   text-sm md:text-lg text-purple-300/90 italic
+                   drop-shadow-[0_0_10px_rgba(124,58,237,0.35)]"
+      >
+        <span className="inline-block animate-[tease_3.5s_ease-in-out_infinite]">
+          More off-beat songs coming soon 🎶
+        </span>
+      </div>
+
+      <style jsx global>{`
+        @keyframes tease {
+          0%   { transform: translateY(0);   opacity: .88; text-shadow: 0 0 6px rgba(124,58,237,.25); }
+          50%  { transform: translateY(-2px); opacity: 1;  text-shadow: 0 0 16px rgba(124,58,237,.55); }
+          100% { transform: translateY(0);   opacity: .88; text-shadow: 0 0 6px rgba(124,58,237,.25); }
+        }
+      `}</style>
     </main>
   );
 }
