@@ -288,22 +288,20 @@ export default function Play() {
         )}
       </section>
       <div
-        className="pointer-events-none select-none fixed md:absolute bottom-6 right-6 z-20
-                   text-sm md:text-lg text-purple-300/90 italic
-                   drop-shadow-[0_0_10px_rgba(124,58,237,0.35)]"
-      >
-        <span className="inline-block animate-[tease_3.5s_ease-in-out_infinite]">
-          More off-beat songs coming soon 🎶
-        </span>
-      </div>
+  className="pointer-events-none select-none fixed md:absolute bottom-6 right-6 z-20 text-sm md:text-lg text-purple-300/90 italic drop-shadow-[0_0_10px_rgba(124,58,237,0.35)]"
+>
+  <span className="inline-block animate-[tease_3.5s_ease-in-out_infinite]">
+    More off-beat songs coming soon 🎶
+  </span>
+</div>
 
-      <style jsx global>{`
-        @keyframes tease {
-          0%   { transform: translateY(0);   opacity: .88; text-shadow: 0 0 6px rgba(124,58,237,.25); }
-          50%  { transform: translateY(-2px); opacity: 1;  text-shadow: 0 0 16px rgba(124,58,237,.55); }
-          100% { transform: translateY(0);   opacity: .88; text-shadow: 0 0 6px rgba(124,58,237,.25); }
-        }
-      `}</style>
+<style jsx global>{`
+  @keyframes tease {
+    0%   { transform: translateY(0);   opacity: .88; text-shadow: 0 0 6px rgba(124,58,237,.25); }
+    50%  { transform: translateY(-2px); opacity: 1;  text-shadow: 0 0 16px rgba(124,58,237,.55); }
+    100% { transform: translateY(0);   opacity: .88; text-shadow: 0 0 6px rgba(124,58,237,.25); }
+  }
+`}</style>
     </main>
   );
 }
