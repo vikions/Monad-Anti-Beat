@@ -194,7 +194,7 @@ export default function Play() {
         )}
 
         {/* Timeline */}
-        <div className="w/full max-w-3xl h-24 relative">
+        <div className="w-full max-w-3xl h-24 relative">
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[6px] bg-zinc-800 rounded-full" />
           <div className="absolute inset-0">
             {startedAt &&
