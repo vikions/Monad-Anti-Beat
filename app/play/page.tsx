@@ -33,12 +33,34 @@ function getUsername(user: any): string {
   return user?.username || user?.displayName || user?.email?.address || user?.email || 'anonymous';
 }
 
+
 function getMGIDAddress(user: any): string | undefined {
+  const accounts: any[] = user?.linkedAccounts || [];
   const CROSS_ID = process.env.NEXT_PUBLIC_MONAD_CROSS_APP_ID; 
-  const ca = user?.linkedAccounts?.find(
-    (a: any) => a?.type === 'cross_app' && a?.providerApp?.id === CROSS_ID
-  );
-  return ca?.embeddedWallets?.[0]?.address;
+
+  
+  let cross = CROSS_ID
+    ? accounts.find(
+        (a: any) =>
+          a?.type === 'cross_app' &&
+          (a?.providerApp?.id === CROSS_ID || a?.providerAppId === CROSS_ID)
+      )
+    : undefined;
+
+  
+  if (!cross) cross = accounts.find((a: any) => a?.type === 'cross_app');
+
+  
+  const addrFromCross =
+    cross?.embeddedWallets?.[0]?.address ||
+    cross?.address ||
+    undefined;
+
+  if (addrFromCross) return addrFromCross;
+
+  
+  const wal = accounts.find((a: any) => a?.type === 'wallet');
+  return wal?.address || undefined;
 }
 // -----------------------------------
 
@@ -158,7 +180,7 @@ export default function Play() {
           </button>
         )}
 
-        
+        {/* Таймлайн */}
         <div className="w-full max-w-3xl h-24 relative">
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[6px] bg-zinc-800 rounded-full" />
           <div className="absolute inset-0">
@@ -193,6 +215,25 @@ export default function Play() {
             })}
           </div>
         </div>
+
+        
+        {authenticated && (
+          <div className="text-xs text-zinc-300 bg-zinc-800/50 border border-zinc-700 rounded p-3 w-full max-w-3xl">
+            <div><b>MGID wallet to submit:</b> {address || '— not resolved —'}</div>
+            {address && (
+              <div className="mt-1">
+                Check username:&nbsp;
+                <a
+                  className="underline"
+                  href={`https://monad-games-id-site.vercel.app/api/check-wallet?wallet=${address}`}
+                  target="_blank" rel="noreferrer"
+                >
+                  /api/check-wallet?wallet={address.slice(0,6)}…{address.slice(-4)}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
 
         
         {!address && (
