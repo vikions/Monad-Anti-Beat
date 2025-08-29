@@ -28,41 +28,37 @@ function mapPoints(dt: number) {
 }
 function clamp(v:number,min:number,max:number){return Math.max(min,Math.min(max,v));}
 
-
 function getUsername(user: any): string {
   return user?.username || user?.displayName || user?.email?.address || user?.email || 'anonymous';
 }
 
-
-function getMGIDAddress(user: any): string | undefined {
+/** Строго берём адрес ИМЕННО из Monad Games ID (CROSS_APP_ID). */
+function getMGIDAddressStrict(user: any): { address?: string; reason?: string } {
   const accounts: any[] = user?.linkedAccounts || [];
-  const CROSS_ID = process.env.NEXT_PUBLIC_MONAD_CROSS_APP_ID; 
+  const CROSS_ID = process.env.NEXT_PUBLIC_MONAD_CROSS_APP_ID; // Должно быть: cmd8euall0037le0my79qpz42
+  if (!CROSS_ID) return { reason: 'ENV NEXT_PUBLIC_MONAD_CROSS_APP_ID is missing' };
 
-  
-  let cross = CROSS_ID
-    ? accounts.find(
-        (a: any) =>
-          a?.type === 'cross_app' &&
-          (a?.providerApp?.id === CROSS_ID || a?.providerAppId === CROSS_ID)
-      )
-    : undefined;
+  const cross = accounts.find(
+    (a: any) =>
+      a?.type === 'cross_app' &&
+      (a?.providerApp?.id === CROSS_ID || a?.providerAppId === CROSS_ID)
+  );
 
-  
-  if (!cross) cross = accounts.find((a: any) => a?.type === 'cross_app');
+  if (!cross) {
+    const have = accounts.filter(a => a?.type === 'cross_app').map((a: any) =>
+      a?.providerApp?.id || a?.providerAppId || 'unknown'
+    );
+    return { reason: `MGID cross_app not linked. Found cross_app ids: [${have.join(', ')}]` };
+  }
 
-  
-  const addrFromCross =
+  const addr =
     cross?.embeddedWallets?.[0]?.address ||
     cross?.address ||
     undefined;
 
-  if (addrFromCross) return addrFromCross;
-
-  
-  const wal = accounts.find((a: any) => a?.type === 'wallet');
-  return wal?.address || undefined;
+  if (!addr) return { reason: 'MGID cross_app has no embedded wallet address' };
+  return { address: addr };
 }
-// -----------------------------------
 
 export default function Play() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -75,9 +71,9 @@ export default function Play() {
 
   const { authenticated, user, login } = usePrivy();
   const username = getUsername(user as any);
-  const address  = getMGIDAddress(user as any); 
+  const { address, reason } = getMGIDAddressStrict(user as any); // 👈 только MGID
 
-  
+  // прогресс-цикл
   useEffect(() => {
     if (!startedAt || done) return;
     let raf = 0;
@@ -96,7 +92,7 @@ export default function Play() {
     setTimeout(() => { audioRef.current?.pause(); setDone(true); }, DURATION_MS + 80);
   };
 
-  
+  // обработчик тапа
   useEffect(() => {
     const handler = (e: KeyboardEvent | MouseEvent) => {
       if (done || !startedAt) return;
@@ -121,7 +117,7 @@ export default function Play() {
 
   const progress = startedAt ? clamp((performance.now() - startedAt) / DURATION_MS, 0, 1) : 0;
 
-  
+  // локальный сабмит
   const submit = async () => {
     if (!authenticated) { await login(); }
     const res = await fetch('/api/submit', {
@@ -132,10 +128,10 @@ export default function Play() {
     if (res.ok) window.location.href = '/leaders';
   };
 
-  
+  // ончейн сабмит (только если нашли MGID-адрес)
   const submitOnchain = async () => {
     if (!authenticated) { await login(); }
-    if (!address) { alert('Sign in with Monad Games ID to get your Games ID wallet.'); return; }
+    if (!address) { alert('Sign in with Monad Games ID first.'); return; }
     if (!startedAt) { alert('Play the song first 😊'); return; }
 
     try {
@@ -143,7 +139,7 @@ export default function Play() {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
         body: JSON.stringify({
-          player: address,           
+          player: address,           // строго MGID-адрес
           taps: taps.map(t=>t.t),
           t0: startedAt,
         }),
@@ -216,10 +212,16 @@ export default function Play() {
           </div>
         </div>
 
-        
+        {/* Инфо-блок о том, что именно отправим */}
         {authenticated && (
           <div className="text-xs text-zinc-300 bg-zinc-800/50 border border-zinc-700 rounded p-3 w-full max-w-3xl">
             <div><b>MGID wallet to submit:</b> {address || '— not resolved —'}</div>
+            {!address && (
+              <div className="mt-1 text-amber-300">
+                {reason || 'Sign in with Monad Games ID.'} <br/>
+                Tip: make sure your Vercel env has <code>NEXT_PUBLIC_MONAD_CROSS_APP_ID=cmd8euall0037le0my79qpz42</code>.
+              </div>
+            )}
             {address && (
               <div className="mt-1">
                 Check username:&nbsp;
@@ -232,18 +234,6 @@ export default function Play() {
                 </a>
               </div>
             )}
-          </div>
-        )}
-
-        
-        {!address && (
-          <div className="text-sm text-amber-300/90 bg-amber-900/20 border border-amber-600/30 rounded p-3">
-            Sign in with <b>Monad Games ID</b> to link your Games ID wallet.
-            {authenticated ? (
-              <> If you still see this — try re-login or reserve a username&nbsp;
-                <a className="underline" href="https://monad-games-id-site.vercel.app/" target="_blank" rel="noreferrer">here</a>.
-              </>
-            ) : null}
           </div>
         )}
 
