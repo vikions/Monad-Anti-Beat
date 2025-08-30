@@ -6,11 +6,11 @@ type Row = { username: string; address?: string; score: number; ts: number };
 function normalize(json: any): { rows: Row[]; totalPages?: number } {
   if (!json) return { rows: [] };
 
-  // MGID формат: { data:[{ username, walletAddress, score? / transactionCount? }], pagination:{ totalPages } }
+  
   const raw = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
 
   const rows: Row[] = raw.map((r: any) => {
-    // пытаемся взять "очки". Если их нет (например сортировка по транзакциям), подставим transactionCount
+    
     const score =
       Number(
         r.score ??
@@ -47,13 +47,13 @@ export default function Leaders() {
   const [pages, setPages] = useState<number | undefined>(undefined);
   const [source, setSource] = useState<'mgid' | 'local' | 'none'>('none');
 
-  const GAME_ID = 116; // твой gameId
+  const GAME_ID = 116; 
 
   useEffect(() => {
     let aborted = false;
 
     async function load() {
-      // 1) тянем через наш серверный прокси (обходит CORS)
+      
       try {
         const r = await fetch(`/api/mgid-leaderboard?gameId=${GAME_ID}&page=${page}&sortBy=scores`, {
           cache: 'no-store',
@@ -69,10 +69,10 @@ export default function Leaders() {
           return;
         }
       } catch {
-        // идём в локальный фоллбэк
+        
       }
 
-      // 2) локальный фоллбэк (твой старый эндпоинт)
+      
       try {
         const r = await fetch('/api/leaderboard', { cache: 'no-store' });
         if (!r.ok) throw new Error('local not ok');

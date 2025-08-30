@@ -1,11 +1,10 @@
 // lib/gamesId.ts
 export function getUsername(user: any): string {
-  // пробуем разные поля, которые Privy может отдавать
   return (
     user?.username ||
     user?.displayName ||
-    user?.email?.address ||   // иногда email — объект
-    user?.email ||            // иногда email — строка
+    user?.email?.address ||   
+    user?.email ||            
     'anonymous'
   );
 }
