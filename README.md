@@ -37,10 +37,10 @@ And soon, I’ll be adding new original songs I’ve recorded, so the challenge 
 ---
 
 ## ⚡ Tech Stack
-Next.js / React
-TailwindCSS
-Privy for authentication
-Monad Games ID integration
-Simple custom rhythm engine
+- Next.js / React
+- TailwindCSS
+- Privy for authentication
+- Monad Games ID integration
+- Simple custom rhythm engine
 
 Stay tuned — more of my original tracks are coming soon!
